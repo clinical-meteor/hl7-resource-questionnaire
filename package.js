@@ -12,7 +12,7 @@ Package.onUse(function(api) {
   api.use('meteor-platform');
   api.use('mongo');
   api.use('aldeed:simple-schema@1.3.3');
-  api.use('aldeed:collection2@2.9.0');
+  api.use('aldeed:collection2@2.3.3');
   api.use('clinical:hl7-resource-datatypes@0.0.1');
   api.use('simple:json-routes@2.1.0');
   api.use('prime8consulting:meteor-oauth2-server@0.0.2')

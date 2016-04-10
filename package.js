@@ -1,6 +1,6 @@
 Package.describe({
   name: 'clinical:hl7-resource-questionnaire',
-  version: '1.1.0',
+  version: '1.2.0',
   summary: 'HL7 FHIR Resource - Questionnaire',
   git: 'https://github.com/clinical-meteor/hl7-resource-questionnaire',
   documentation: 'README.md'
@@ -24,5 +24,6 @@ Package.onUse(function (api) {
   api.addFiles('server/initialize.js', 'server');
 
   api.export('Questionnaire');
+  api.export('Questionnaires');
   api.export('QuestionnaireSchema');
 });

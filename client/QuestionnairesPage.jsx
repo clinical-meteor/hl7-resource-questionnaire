@@ -1,9 +1,7 @@
 import { CardText, CardTitle } from 'material-ui/Card';
 import { Tab, Tabs } from 'material-ui/Tabs';
-import { GlassCard, VerticalCanvas } from 'meteor/clinical:glass-ui';
+import { Glass, GlassCard, VerticalCanvas } from 'meteor/clinical:glass-ui';
 
-import Glass from './Glass';
-//import GlassCard from './GlassCard';
 import QuestionnaireDetail from './QuestionnaireDetail';
 import QuestionnaireTable from './QuestionnaireTable';
 import React from 'react';

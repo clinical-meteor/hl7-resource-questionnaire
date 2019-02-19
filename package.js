@@ -13,7 +13,7 @@ Package.onUse(function (api) {
   api.use('mongo');
 
   api.use('aldeed:collection2@3.0.0');
-  api.use('clinical:hl7-resource-datatypes@4.0.0');
+  api.use('clinical:hl7-resource-datatypes@4.0.4');
   api.use('clinical:hl7-resource-bundle@1.4.0');
 
   api.use('simple:json-routes@2.1.0');
@@ -30,7 +30,9 @@ Package.onUse(function (api) {
   api.use('matb33:collection-hooks@0.7.15');
   api.use('clinical:alert@2.1.3');
   
-  api.addFiles('lib/Questionnaires.js');
+  api.addFiles('lib/Questionnaires.js', ['client', 'server']);
+  api.addFiles('lib/methods.js', ['client', 'server']);
+
 
   api.addFiles('server/rest.js', 'server');
   api.addFiles('server/initialize.js', 'server');

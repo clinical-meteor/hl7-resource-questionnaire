@@ -1,15 +1,16 @@
 import { CardText, CardTitle } from 'material-ui/Card';
 import { Tab, Tabs } from 'material-ui/Tabs';
-import { Glass, GlassCard, VerticalCanvas } from 'meteor/clinical:glass-ui';
+import { Glass, GlassCard, VerticalCanvas, FullPageCanvas } from 'meteor/clinical:glass-ui';
 
 import QuestionnaireDetail from './QuestionnaireDetail';
 import QuestionnaireTable from './QuestionnaireTable';
+import SortableQuestionnaire from './SortableQuestionnaire';
+
 import React from 'react';
 import { ReactMeteorData } from 'meteor/react-meteor-data';
 import ReactMixin from 'react-mixin';
-//import { VerticalCanvas } from './VerticalCanvas';
 
-// import { Questionnaires } from '../lib/Questionnaires';
+
 import { Session } from 'meteor/session';
 
 let defaultQuestionnaire = {
@@ -23,6 +24,7 @@ let defaultQuestionnaire = {
 };
 Session.setDefault('questionnaireFormData', defaultQuestionnaire);
 Session.setDefault('questionnaireSearchFilter', '');
+
 
 export class QuestionnairesPage extends React.Component {
   getMeteorData() {
@@ -71,35 +73,42 @@ export class QuestionnairesPage extends React.Component {
     console.log('React.version: ' + React.version);
     return (
       <div id="questionnairesPage">
-        <VerticalCanvas>
-          <GlassCard height="auto">
-            <CardTitle
-              title="Questionnaires"
-            />
-            <CardText>
-              <Tabs id='questionnairesPageTabs' default value={this.data.tabIndex} onChange={this.handleTabChange} initialSelectedIndex={1}>
-                 <Tab className="newQuestionnaireTab" label='New' style={this.data.style.tab} onActive={ this.onNewTab } value={0}>
-                   {/* <QuestionnaireDetail id='newQuestionnaire' /> */}
-                 </Tab>
-                 <Tab className="questionnaireListTab" label='Questionnaires' onActive={this.handleActive} style={this.data.style.tab} value={1}>
-                   <QuestionnaireTable showBarcodes={true} showAvatars={true} />
-                 </Tab>
-                 <Tab className="questionnaireDetailTab" label='Detail' onActive={this.handleActive} style={this.data.style.tab} value={2}>
-                   {/* <QuestionnaireDetail id='questionnaireDetails' currentQuestionnaire={this.data.currentQuestionnaire} /> */}
-                 </Tab>
-             </Tabs>
+        <FullPageCanvas>
+          <Col md={8}>
+            <GlassCard height="auto">
+              <CardTitle
+                title="Questionnaires"
+              />
+              <CardText>
+                <Tabs id='questionnairesPageTabs' default value={this.data.tabIndex} onChange={this.handleTabChange} initialSelectedIndex={1}>
+                  <Tab className="newQuestionnaireTab" label='New' style={this.data.style.tab} onActive={ this.onNewTab } value={0}>
+                    <QuestionnaireDetail id='newQuestionnaire' />
+                  </Tab>
+                  <Tab className="questionnaireListTab" label='Questionnaires' onActive={this.handleActive} style={this.data.style.tab} value={1}>
+                    <Col md={6}>
+                      <QuestionnaireTable showBarcodes={true} showAvatars={true} />
+                    </Col>
+                    <Col md={6}>
+                    <SortableQuestionnaire />
+                    </Col>
+                  </Tab>
+                  <Tab className="questionnaireDetailTab" label='Detail' onActive={this.handleActive} style={this.data.style.tab} value={2}>
+                    <QuestionnaireDetail id='questionnaireDetails' currentQuestionnaire={this.data.currentQuestionnaire} />
+                  </Tab>
+              </Tabs>
 
 
-            </CardText>
-          </GlassCard>
-        </VerticalCanvas>
+              </CardText>
+            </GlassCard>
+          </Col>
+
+          
+        </FullPageCanvas>
       </div>
     );
   }
 }
 
 
-
 ReactMixin(QuestionnairesPage.prototype, ReactMeteorData);
-
 export default QuestionnairesPage;

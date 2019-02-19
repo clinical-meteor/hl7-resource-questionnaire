@@ -16,8 +16,14 @@ var SidebarElements = [{
   'to': '/questionnaires',
   'href': '/questionnaires'
 }];
+var AdminSidebarElements = [{
+  'primaryText': 'Questionnaires',
+  'to': '/questionnaires',
+  'href': '/questionnaires'
+}];
 
 export { 
+  AdminSidebarElements,
   SidebarElements, 
   DynamicRoutes, 
 

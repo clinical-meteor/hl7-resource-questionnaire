@@ -13,27 +13,16 @@ import { TableNoData } from 'meteor/clinical:glass-ui'
 flattenQuestionnaire = function(questionnaire){
   let result = {
     _id: questionnaire._id,
-    id: questionnaire.id,
-    active: questionnaire.active.toString(),
-    gender: questionnaire.gender,
-    name: '',
-    mrn: '',
-    birthDate: '',
-    photo: "/thumbnail-blank.png",
-    initials: 'abc'
+    title: '',
+    state: '',
+    date: '',
+    items: 0
   };
 
-  // there's an off-by-1 error between momment() and Date() that we want
-  // to account for when converting back to a string
-  result.birthDate = moment(questionnaire.birthDate).add(1, 'days').format("YYYY-MM-DD")
-  result.photo = get(questionnaire, 'photo[0].url', '');
-  result.mrn = get(questionnaire, 'identifier[0].value', '');
-
-  if(has(questionnaire, 'name[0].text')){
-    result.name = get(questionnaire, 'name[0].text');    
-  } else {
-    result.name = get(questionnaire, 'name[0].given[0]') + ' ' + get(questionnaire, 'name[0].family[0]');
-  }
+  result.date = moment(questionnaire.date).add(1, 'days').format("YYYY-MM-DD")
+  result.title = get(questionnaire, 'title', '');
+  result.status = get(questionnaire, 'status', '');
+  result.items = get(questionnaire, 'item', []).length;
 
   return result;
 }
@@ -68,7 +57,7 @@ export class QuestionnaireTable extends React.Component {
         }
       },
       selected: [],
-      patients: []
+      questionnaires: []
     };
 
     let query = {};
@@ -87,28 +76,16 @@ export class QuestionnaireTable extends React.Component {
       // console.log('this.props.data', this.props.data);
 
       if(this.props.data.length > 0){              
-        this.props.data.forEach(function(patient){
-          data.patients.push(flattenQuestionnaire(patient));
+        this.props.data.forEach(function(questionnaire){
+          data.questionnaires.push(flattenQuestionnaire(questionnaire));
         });  
       }
     } else {
-      data.patients = Questionnaires.find().map(function(patient){
-        return flattenQuestionnaire(patient);
+      data.questionnaires = Questionnaires.find().map(function(questionnaire){
+        return flattenQuestionnaire(questionnaire);
       });
     }
 
-
-    if (Session.get('appWidth') < 768) {
-      data.style.hideOnPhone.visibility = 'hidden';
-      data.style.hideOnPhone.display = 'none';
-      data.style.cellHideOnPhone.visibility = 'hidden';
-      data.style.cellHideOnPhone.display = 'none';
-    } else {
-      data.style.hideOnPhone.visibility = 'visible';
-      data.style.hideOnPhone.display = 'table-cell';
-      data.style.cellHideOnPhone.visibility = 'visible';
-      data.style.cellHideOnPhone.display = 'table-cell';
-    }
 
     // console.log("QuestionnaireTable[data]", data);
     return data;
@@ -117,9 +94,9 @@ export class QuestionnaireTable extends React.Component {
     this.refs[avatarId].src = Meteor.absoluteUrl() + 'noAvatar.png';
   }
   rowClick(id){
-    Session.set('patientsUpsert', false);
+    Session.set('questionnairesUpsert', false);
     Session.set('selectedQuestionnaire', id);
-    Session.set('patientPageTabIndex', 2);
+    Session.set('questionnairePageTabIndex', 2);
   }
   renderRowAvatarHeader(){
     if (get(Meteor, 'settings.public.defaults.avatars') && (this.props.showAvatars === true)) {
@@ -128,12 +105,12 @@ export class QuestionnaireTable extends React.Component {
       );
     }
   }
-  renderRowAvatar(patient, avatarStyle){
-    console.log('renderRowAvatar', patient, avatarStyle)
+  renderRowAvatar(questionnaire, avatarStyle){
+    console.log('renderRowAvatar', questionnaire, avatarStyle)
     if (get(Meteor, 'settings.public.defaults.avatars') && (this.props.showAvatars === true)) {
       return (
         <td className='avatar'>
-          <img src={patient.photo} ref={patient._id} onError={ this.imgError.bind(this, patient._id) } style={avatarStyle}/>
+          <img src={questionnaire.photo} ref={questionnaire._id} onError={ this.imgError.bind(this, questionnaire._id) } style={avatarStyle}/>
         </td>
       );
     }
@@ -145,26 +122,26 @@ export class QuestionnaireTable extends React.Component {
       );
     }
   }
-  renderSendButton(patient, avatarStyle){
+  renderSendButton(questionnaire, avatarStyle){
     if (this.props.showSendButton === true) {
       return (
         <td className='sendButton' style={this.data.style.hideOnPhone}>
-          <FlatButton label="send" onClick={this.onSend.bind('this', this.data.patients[i]._id)}/>
+          <FlatButton label="send" onClick={this.onSend.bind('this', this.data.questionnaires[i]._id)}/>
         </td>
       );
     }
   }
   onSend(id){
-    let patient = Questionnaires.findOne({_id: id});
+    let questionnaire = Questionnaires.findOne({_id: id});
 
-    console.log("QuestionnaireTable.onSend()", patient);
+    console.log("QuestionnaireTable.onSend()", questionnaire);
 
     var httpEndpoint = "http://localhost:8080";
     if (get(Meteor, 'settings.public.interfaces.default.channel.endpoint')) {
       httpEndpoint = get(Meteor, 'settings.public.interfaces.default.channel.endpoint');
     }
     HTTP.post(httpEndpoint + '/Questionnaire', {
-      data: patient
+      data: questionnaire
     }, function(error, result){
       if (error) {
         console.log("error", error);
@@ -174,33 +151,25 @@ export class QuestionnaireTable extends React.Component {
       }
     });
   }
-  selectQuestionnaireRow(patientId){
+  selectQuestionnaireRow(questionnaireId){
     if(typeof(this.props.onRowClick) === "function"){
-      this.props.onRowClick(patientId);
+      this.props.onRowClick(questionnaireId);
     }
   }
   render () {
     let tableRows = [];
     let footer;
 
-    if(this.data.patients.length === 0){
+    if(this.data.questionnaires.length === 0){
       footer = <TableNoData noDataPadding={ this.props.noDataPadding } />
     } else {
-      for (var i = 0; i < this.data.patients.length; i++) {
+      for (var i = 0; i < this.data.questionnaires.length; i++) {
         tableRows.push(
-          <tr key={i} className="patientRow" style={{cursor: "pointer"}} onClick={this.selectQuestionnaireRow.bind(this, this.data.patients[i].id )} >
-  
-            { this.renderRowAvatar(this.data.patients[i], this.data.style.avatar) }
-  
-            <td className='name' onClick={ this.rowClick.bind('this', this.data.patients[i]._id)} style={this.data.style.cell}>{this.data.patients[i].name }</td>
-            <td className='title' onClick={ this.rowClick.bind('this', this.data.patients[i]._id)} style={this.data.style.cell}>{this.data.patients[i].title }</td>
-            <td className='status' onClick={ this.rowClick.bind('this', this.data.patients[i]._id)} style={this.data.style.cell}>{this.data.patients[i].status }</td>
-            <td className='approvalDate' onClick={ this.rowClick.bind('this', this.data.patients[i]._id)} style={{minWidth: '100px', paddingTop: '16px'}}>{this.data.patients[i].birthDate }</td>
-            <td className='purpose' onClick={ this.rowClick.bind('this', this.data.patients[i]._id)} style={this.data.style.cellHideOnPhone}>{this.data.patients[i].purpose}</td>
-            <td className='code' style={this.data.style.cellHideOnPhone}>{this.data.patients[i].code}</td>
-            <td className='id' onClick={ this.rowClick.bind('this', this.data.patients[i].id)} style={this.data.style.cellHideOnPhone}><span className="barcode">{this.data.patients[i].id}</span></td>            
-
-              { this.renderSendButton(this.data.patients[i], this.data.style.avatar) }
+          <tr key={i} className="questionnaireRow" style={{cursor: "pointer"}} onClick={this.selectQuestionnaireRow.bind(this, this.data.questionnaires[i].id )} >
+            <td className='title' onClick={ this.rowClick.bind('this', this.data.questionnaires[i]._id)} style={this.data.style.cell}>{this.data.questionnaires[i].title }</td>
+            <td className='status' onClick={ this.rowClick.bind('this', this.data.questionnaires[i]._id)} style={this.data.style.cell}>{this.data.questionnaires[i].status }</td>
+            <td className='date' onClick={ this.rowClick.bind('this', this.data.questionnaires[i]._id)} style={{minWidth: '100px', paddingTop: '16px'}}>{this.data.questionnaires[i].date }</td>
+            <td className='items' onClick={ this.rowClick.bind('this', this.data.questionnaires[i]._id)} style={this.data.style.cell}>{this.data.questionnaires[i].items }</td>
           </tr>
         );
       }
@@ -210,20 +179,13 @@ export class QuestionnaireTable extends React.Component {
 
     return(
       <div>
-        <Table id='patientsTable' hover >
+        <Table id='questionnairesTable' hover >
           <thead>
             <tr>
-              { this.renderRowAvatarHeader() }
-
-              <th className='title'>title</th>
-              <th className='name'>name</th>
-              <th className='status'>status</th>
-              <th className='approvalDate' style={{minWidth: '100px'}}>approval date</th>
-              <th className='purpose' style={this.data.style.hideOnPhone}>purpose</th>
-              <th className='code' style={this.data.style.hideOnPhone}>code</th>
-              <th className='id' style={this.data.style.hideOnPhone}>_id</th>
-              
-              { this.renderSendButtonHeader() }
+              <th className='title'>Title</th>
+              <th className='status'>Status</th>
+              <th className='date' style={{minWidth: '100px'}}>Date</th>
+              <th className='items'>Items</th>
             </tr>
           </thead>
           <tbody>

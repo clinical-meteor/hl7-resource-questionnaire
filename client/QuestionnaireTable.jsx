@@ -96,7 +96,7 @@ export class QuestionnaireTable extends React.Component {
   rowClick(id){
     Session.set('questionnairesUpsert', false);
     Session.set('selectedQuestionnaire', id);
-    Session.set('questionnairePageTabIndex', 2);
+    // Session.set('questionnairePageTabIndex', 2);
   }
   renderRowAvatarHeader(){
     if (get(Meteor, 'settings.public.defaults.avatars') && (this.props.showAvatars === true)) {

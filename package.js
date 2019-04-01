@@ -1,6 +1,6 @@
 Package.describe({
   name: 'clinical:hl7-resource-questionnaire',
-  version: '1.4.5',
+  version: '1.4.6',
   summary: 'HL7 FHIR Resource - Questionnaire',
   git: 'https://github.com/clinical-meteor/hl7-resource-questionnaire',
   documentation: 'README.md'
@@ -23,7 +23,7 @@ Package.onUse(function (api) {
   api.use('http');
   api.use('react-meteor-data@0.2.15');
 
-  api.use('clinical:glass-ui@2.4.6');
+  api.use('clinical:glass-ui@2.4.7');
   api.use('clinical:extended-api@2.4.0');
   api.use('clinical:base-model@1.4.0');
   api.use('clinical:user-model@1.6.2');

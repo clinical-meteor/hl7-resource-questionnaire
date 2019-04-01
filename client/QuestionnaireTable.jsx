@@ -8,7 +8,10 @@ import { Table } from 'react-bootstrap';
 import { Session } from 'meteor/session';
 import { has, get } from 'lodash';
 import { TableNoData } from 'meteor/clinical:glass-ui'
+import PropTypes from 'prop-types';
+import Toggle from 'material-ui/Toggle';
 
+import { FaTags, FaCode, FaPuzzlePiece, FaLock  } from 'react-icons/fa';
 
 flattenQuestionnaire = function(questionnaire){
   let result = {
@@ -23,7 +26,7 @@ flattenQuestionnaire = function(questionnaire){
   result.title = get(questionnaire, 'title', '');
   result.status = get(questionnaire, 'status', '');
   result.items = get(questionnaire, 'item', []).length;
-
+  
   return result;
 }
 
@@ -87,7 +90,7 @@ export class QuestionnaireTable extends React.Component {
     }
 
 
-    // console.log("QuestionnaireTable[data]", data);
+    console.log("QuestionnaireTable[data]", data);
     return data;
   }
   imgError(avatarId) {
@@ -156,6 +159,85 @@ export class QuestionnaireTable extends React.Component {
       this.props.onRowClick(questionnaireId);
     }
   }
+  renderTogglesHeader(){
+    if (!this.props.hideToggle) {
+      return (
+        <th className="toggle">Toggle</th>
+      );
+    }
+  }
+  toggleQuestionnaireStatus(questionnaire, event, toggle){
+    console.log('toggleQuestionnaireStatus', questionnaire, toggle);
+    let newStatus = 'draft';
+
+    if(toggle){
+      newStatus = 'active';
+    } else {
+      newStatus = 'draft';
+    }
+
+    Questionnaires._collection.update({_id: questionnaire._id}, {$set: {
+      'status': newStatus
+    }}, function(error, result){
+      if(error){
+        console.error('Questionnaire Error', error);
+      }
+    });
+  }
+  renderToggles(questionnaires){
+    if (!this.props.hideToggle) {
+      let toggleValue = false;
+      if(get(questionnaires, 'status') === "active"){
+        toggleValue = true;
+      }
+      return (
+        <td className="toggle">
+            <Toggle
+              defaultToggled={true}
+              value={toggleValue}
+              onToggle={this.toggleQuestionnaireStatus.bind(this, questionnaires)}
+            />
+          </td>
+      );
+    }
+  }
+  renderIdentifierHeader(){
+    if (!this.props.hideIdentifier) {
+      return (
+        <th className="identifier">Identifier</th>
+      );
+    }
+  }
+  renderIdentifier(questionnaire ){
+    if (!this.props.hideIdentifier) {
+      let classNames = 'identifier';
+      if(this.props.barcodes){
+        classNames = 'barcode identifier'
+      }
+      return (
+        <td className={classNames}>{ get(questionnaire, 'identifier[0].value') }</td>       );
+    }
+  }
+  renderActionIconsHeader(){
+    if (!this.props.hideActionIcons) {
+      return (
+        <th className='actionIcons' style={{minWidth: '120px'}}>Actions</th>
+      );
+    }
+  }
+  renderActionIcons(actionIcons ){
+    if (!this.props.hideActionIcons) {
+      return (
+        <td className='actionIcons' style={{minWidth: '120px'}}>
+          <FaLock style={{marginLeft: '2px', marginRight: '2px'}} />
+          <FaTags style={{marginLeft: '2px', marginRight: '2px'}} />
+          <FaCode style={{marginLeft: '2px', marginRight: '2px'}} />
+          <FaPuzzlePiece style={{marginLeft: '2px', marginRight: '2px'}} />          
+        </td>
+      );
+    }
+  } 
+
   render () {
     let tableRows = [];
     let footer;
@@ -166,10 +248,13 @@ export class QuestionnaireTable extends React.Component {
       for (var i = 0; i < this.data.questionnaires.length; i++) {
         tableRows.push(
           <tr key={i} className="questionnaireRow" style={{cursor: "pointer"}} onClick={this.selectQuestionnaireRow.bind(this, this.data.questionnaires[i].id )} >
+            { this.renderToggles(this.data.questionnaires[i]) }
+            { this.renderActionIcons(this.data.questionnaires[i]) }
             <td className='title' onClick={ this.rowClick.bind('this', this.data.questionnaires[i]._id)} style={this.data.style.cell}>{this.data.questionnaires[i].title }</td>
             <td className='status' onClick={ this.rowClick.bind('this', this.data.questionnaires[i]._id)} style={this.data.style.cell}>{this.data.questionnaires[i].status }</td>
             <td className='date' onClick={ this.rowClick.bind('this', this.data.questionnaires[i]._id)} style={{minWidth: '100px', paddingTop: '16px'}}>{this.data.questionnaires[i].date }</td>
             <td className='items' onClick={ this.rowClick.bind('this', this.data.questionnaires[i]._id)} style={this.data.style.cell}>{this.data.questionnaires[i].items }</td>
+            { this.renderIdentifier(this.data.questionnaires[i]) }
           </tr>
         );
       }
@@ -182,10 +267,13 @@ export class QuestionnaireTable extends React.Component {
         <Table id='questionnairesTable' hover >
           <thead>
             <tr>
+            { this.renderTogglesHeader() }
+            { this.renderActionIconsHeader() }
               <th className='title'>Title</th>
               <th className='status'>Status</th>
               <th className='date' style={{minWidth: '100px'}}>Date</th>
               <th className='items'>Items</th>
+              { this.renderIdentifierHeader() }
             </tr>
           </thead>
           <tbody>
@@ -198,6 +286,15 @@ export class QuestionnaireTable extends React.Component {
   }
 }
 
-
+QuestionnaireTable.propTypes = {
+  data: PropTypes.array,
+  fhirVersion: PropTypes.string,
+  query: PropTypes.object,
+  paginationLimit: PropTypes.number,
+  hideIdentifier: PropTypes.bool,
+  hideToggle: PropTypes.bool,
+  hideActionIcons: PropTypes.bool,
+  onRowClick: PropTypes.func
+};
 ReactMixin(QuestionnaireTable.prototype, ReactMeteorData);
 export default QuestionnaireTable;

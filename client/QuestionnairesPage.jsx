@@ -108,9 +108,13 @@ export class QuestionnairesPage extends React.Component {
               <CardTitle
                 title="Questionnaires"
               />
-              <CardText>
-                <QuestionnaireTable />
-              </CardText>
+              <QuestionnaireTable 
+                hideCheckboxes={true}
+                hideIdentifier={true}
+                onRemoveRecord={function(questionnaireId){
+                  Questionnaires.remove({_id: questionnaireId})
+                }}
+              />
             </GlassCard>
           </Col>
           <Col md={4}>

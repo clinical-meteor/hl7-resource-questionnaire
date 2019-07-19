@@ -12,6 +12,7 @@ import PropTypes from 'prop-types';
 import Toggle from 'material-ui/Toggle';
 
 import { FaTags, FaCode, FaPuzzlePiece, FaLock  } from 'react-icons/fa';
+import { GoTrashcan } from 'react-icons/go'
 
 flattenQuestionnaire = function(questionnaire){
   let result = {
@@ -160,7 +161,7 @@ export class QuestionnaireTable extends React.Component {
     }
   }
   renderTogglesHeader(){
-    if (!this.props.hideToggle) {
+    if (!this.props.hideCheckboxes) {
       return (
         <th className="toggle">Toggle</th>
       );
@@ -185,7 +186,7 @@ export class QuestionnaireTable extends React.Component {
     });
   }
   renderToggles(questionnaires){
-    if (!this.props.hideToggle) {
+    if (!this.props.hideCheckboxes) {
       let toggleValue = false;
       if(get(questionnaires, 'status') === "active"){
         toggleValue = true;
@@ -225,19 +226,46 @@ export class QuestionnaireTable extends React.Component {
       );
     }
   }
-  renderActionIcons(actionIcons ){
+  renderActionIcons(questionnaire ){
     if (!this.props.hideActionIcons) {
+      let iconStyle = {
+        marginLeft: '4px', 
+        marginRight: '4px', 
+        marginTop: '4px', 
+        fontSize: '120%'
+      }
+
       return (
         <td className='actionIcons' style={{minWidth: '120px'}}>
-          <FaLock style={{marginLeft: '2px', marginRight: '2px'}} />
-          <FaTags style={{marginLeft: '2px', marginRight: '2px'}} />
-          <FaCode style={{marginLeft: '2px', marginRight: '2px'}} />
-          <FaPuzzlePiece style={{marginLeft: '2px', marginRight: '2px'}} />          
+          <FaTags style={iconStyle} onClick={this.onMetaClick.bind(this, questionnaire)} />
+          <GoTrashcan style={iconStyle} onClick={this.removeRecord.bind(this, questionnaire._id)} />  
         </td>
       );
     }
   } 
+  removeRecord(_id){
+    console.log('Remove questionnaire ', _id)
+    if(this.props.onRemoveRecord){
+      this.props.onRemoveRecord(_id);
+    }
+  }
+  onActionButtonClick(id){
+    if(typeof this.props.onActionButtonClick === "function"){
+      this.props.onActionButtonClick(id);
+    }
+  }
+  cellClick(id){
+    if(typeof this.props.onCellClick === "function"){
+      this.props.onCellClick(id);
+    }
+  }
 
+  onMetaClick(patient){
+    let self = this;
+    if(this.props.onMetaClick){
+      this.props.onMetaClick(self, patient);
+    }
+  }
   render () {
     let tableRows = [];
     let footer;
@@ -292,9 +320,16 @@ QuestionnaireTable.propTypes = {
   query: PropTypes.object,
   paginationLimit: PropTypes.number,
   hideIdentifier: PropTypes.bool,
-  hideToggle: PropTypes.bool,
+  hideCheckboxes: PropTypes.bool,
+  hideBarcodes: PropTypes.bool,
   hideActionIcons: PropTypes.bool,
-  onRowClick: PropTypes.func
+  onCellClick: PropTypes.func,
+  onRowClick: PropTypes.func,
+  onMetaClick: PropTypes.func,
+  onRemoveRecord: PropTypes.func,
+  onActionButtonClick: PropTypes.func,
+  actionButtonLabel: PropTypes.string
+
 };
 ReactMixin(QuestionnaireTable.prototype, ReactMeteorData);
 export default QuestionnaireTable;

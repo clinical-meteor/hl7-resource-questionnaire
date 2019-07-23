@@ -9,7 +9,7 @@ import { Session } from 'meteor/session';
 import { has, get } from 'lodash';
 import { TableNoData } from 'meteor/clinical:glass-ui'
 import PropTypes from 'prop-types';
-import Toggle from 'material-ui/Toggle';
+import {Checkbox} from 'material-ui';
 
 import { FaTags, FaCode, FaPuzzlePiece, FaLock  } from 'react-icons/fa';
 import { GoTrashcan } from 'react-icons/go'
@@ -160,15 +160,15 @@ export class QuestionnaireTable extends React.Component {
       this.props.onRowClick(questionnaireId);
     }
   }
-  renderTogglesHeader(){
+  renderCheckboxHeader(){
     if (!this.props.hideCheckboxes) {
       return (
-        <th className="toggle">Toggle</th>
+        <th className="toggle"></th>
       );
     }
   }
-  toggleQuestionnaireStatus(questionnaire, event, toggle){
-    console.log('toggleQuestionnaireStatus', questionnaire, toggle);
+  onRowChecked(questionnaire, event, toggle){
+    console.log('onRowChecked', questionnaire, toggle);
     let newStatus = 'draft';
 
     if(toggle){
@@ -185,18 +185,24 @@ export class QuestionnaireTable extends React.Component {
       }
     });
   }
-  renderToggles(questionnaires){
+  renderCheckbox(questionnaire){
     if (!this.props.hideCheckboxes) {
       let toggleValue = false;
-      if(get(questionnaires, 'status') === "active"){
+      let defaultToggle = false;
+
+      if(get(questionnaire, 'status') === "active"){
         toggleValue = true;
+        defaultToggle = true;
+      } else {
+        toggleValue = false;
+        defaultToggle = false;
       }
       return (
         <td className="toggle">
-            <Toggle
-              defaultToggled={true}
+            <Checkbox
+              defaultChecked={defaultToggle}
               value={toggleValue}
-              onToggle={this.toggleQuestionnaireStatus.bind(this, questionnaires)}
+              onCheck={this.onRowChecked.bind(this, questionnaire)}
             />
           </td>
       );
@@ -276,7 +282,7 @@ export class QuestionnaireTable extends React.Component {
       for (var i = 0; i < this.data.questionnaires.length; i++) {
         tableRows.push(
           <tr key={i} className="questionnaireRow" style={{cursor: "pointer"}} onClick={this.selectQuestionnaireRow.bind(this, this.data.questionnaires[i].id )} >
-            { this.renderToggles(this.data.questionnaires[i]) }
+            { this.renderCheckbox(this.data.questionnaires[i]) }
             { this.renderActionIcons(this.data.questionnaires[i]) }
             <td className='title' onClick={ this.rowClick.bind('this', this.data.questionnaires[i]._id)} style={this.data.style.cell}>{this.data.questionnaires[i].title }</td>
             <td className='status' onClick={ this.rowClick.bind('this', this.data.questionnaires[i]._id)} style={this.data.style.cell}>{this.data.questionnaires[i].status }</td>
@@ -295,7 +301,7 @@ export class QuestionnaireTable extends React.Component {
         <Table id='questionnairesTable' hover >
           <thead>
             <tr>
-            { this.renderTogglesHeader() }
+            { this.renderCheckboxHeader() }
             { this.renderActionIconsHeader() }
               <th className='title'>Title</th>
               <th className='status'>Status</th>
@@ -328,8 +334,8 @@ QuestionnaireTable.propTypes = {
   onMetaClick: PropTypes.func,
   onRemoveRecord: PropTypes.func,
   onActionButtonClick: PropTypes.func,
+  onCheck: PropTypes.func,
   actionButtonLabel: PropTypes.string
-
 };
 ReactMixin(QuestionnaireTable.prototype, ReactMeteorData);
 export default QuestionnaireTable;

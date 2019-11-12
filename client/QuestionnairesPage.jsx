@@ -1,4 +1,4 @@
-import { CardText, CardTitle, CardActions, Tab, Tabs, TextField, Toggle, RaisedButton } from 'material-ui';
+import { CardText, CardTitle, CardActions, Tab, Tabs, TextField, Toggle, RaisedButton, FlatButton } from 'material-ui';
 import { Glass, GlassCard, VerticalCanvas, FullPageCanvas, DynamicSpacer } from 'meteor/clinical:glass-ui';
 import { Select, MenuItem } from '@material-ui/core';
 
@@ -14,6 +14,7 @@ import ReactMixin from 'react-mixin';
 import { Grid, Col, Row } from 'react-bootstrap';
 import { get } from 'lodash';
 import { Session } from 'meteor/session';
+import { Random } from 'meteor/random';
 
 
 
@@ -28,9 +29,18 @@ let defaultQuestionnaire = {
 };
 Session.setDefault('questionnaireFormData', defaultQuestionnaire);
 Session.setDefault('questionnaireSearchFilter', '');
-
+Session.setDefault('questionnairePageTabIndex', 0);
+Session.setDefault('questionnaireDesignerCurrentQuestion', {
+  text: '',
+  multiplicity: 1,
+  multiline: false,
+  numerical: false
+});
+Session.setDefault('questionnaireDesignerCurrentMultiChoice', {label: ''});
+Session.setDefault('questionnaireIsSorting', false);
 
 Session.setDefault('enableCurrentQuestionnaire', false);
+Session.setDefault('activeQuestionnaireName', 'bar');
 export class QuestionnairesPage extends React.Component {
   getMeteorData() {
     let data = {
@@ -48,7 +58,13 @@ export class QuestionnairesPage extends React.Component {
       questionnaireId: false,
       sortableItems: ['Lorem ipsum?', 'Ipsum foo?', 'Dolar set et?'],
       enabled: Session.get('enableCurrentQuestionnaire'),
-      chatbotInstalled: false
+      chatbotInstalled: false,
+      questionnaireName: '',
+      questionnaireDesignerCurrentQuestion: {text: ''},
+      questionnaireDesignerCurrentMultiChoice: {label: ''},
+      isActive: false,
+      isNumber: false,
+      isSorting: Session.get('questionnaireIsSorting')
     };
 
     if (Session.get('questionnaireFormData')) {
@@ -70,18 +86,50 @@ export class QuestionnairesPage extends React.Component {
             data.sortableItems.push(get(item, 'text'));              
           });
         }
+
+        if(get(data, 'currentQuestionnaire.status') === "active"){
+          data.isActive = true;
+        } else {
+          data.isActive = false;
+        }
+
+        if(get(data, 'currentQuestionnaire.title')){
+          data.questionnaireName = get(data, 'currentQuestionnaire.title');
+        } else {
+          data.questionnaireName = '';
+        }
+
     }
-
-
-    data.style = Glass.blur(data.style);
-    data.style.appbar = Glass.darkroom(data.style.appbar);
-    data.style.tab = Glass.darkroom(data.style.tab);
 
     console.log("QuestionnairesPage[data]", data);
     return data;
   }
-  enableQuestionnaire(){
-    Session.toggle('enableCurrentQuestionnaire');
+  toggleSortStatus(){
+    if(Session.equals('questionnaireIsSorting', true)){
+      this.saveSortedQuestionnaire();
+      Session.set('questionnaireIsSorting', false);
+    } else {
+      Session.set('questionnaireIsSorting', true);
+    }    
+  }
+  toggleActiveStatus(event, newValue){
+    //Session.toggle('enableCurrentQuestionnaire');
+    console.log('toggleActiveStatus', event, newValue)
+    console.log('toggleActiveStatus currentQuestionnaire id', get(this, 'data.currentQuestionnaire._id'))
+
+    let currentStatus =  get(this, 'data.currentQuestionnaire.status');
+
+    console.log('currentStatus', currentStatus)
+
+    if(currentStatus === 'inactive'){
+      Questionnaires.update({_id: get(this, 'data.currentQuestionnaire._id')}, {$set: {
+        'status': 'active'
+      }});
+    } else if (currentStatus === 'active'){
+      Questionnaires.update({_id: get(this, 'data.currentQuestionnaire._id')}, {$set: {
+        'status': 'inactive'
+      }});
+    }
   }
 
   handleTabChange(index){
@@ -97,13 +145,113 @@ export class QuestionnairesPage extends React.Component {
   addChoice(){
     console.log('addChoice')
   }
+  changeText(name, event, newValue){
+    console.log('changeText', this, newValue)
+
+    // Session.set('activeQuestionnaireName', newValue);
+    // console.log('_id', get(this, 'data.currentQuestionnaire._id'))
+
+    Questionnaires.update({_id: get(this, 'data.currentQuestionnaire._id')}, {$set: {
+      'title': newValue
+    }});
+  }
+  addQuestion(event, bar, baz){
+    console.log('Adding a question to Questionnaire/', get(this, 'data.currentQuestionnaire._id'))
+    console.log(' ')
+    console.log('Going to try to add the following item: ');
+    console.log(Session.get('questionnaireDesignerCurrentQuestion'));
+    console.log(' ')
+    console.log('Output of current Questionnaire', get(this, 'data.currentQuestionnaire'))
+    
+    let itemsArray = get(this, 'data.currentQuestionnaire.item', []);
+    let newItem = Session.get('questionnaireDesignerCurrentQuestion')
+    
+    if(itemsArray.length === 0){
+      newItem.linkId = 1;
+    } else {
+      newItem.linkId = Random.id();
+    }
+    
+    console.log(' ')
+    console.log("This is the new item we've generated and will be attaching to the questionnaire: ", newItem)
+    console.log(' ')
+
+    Questionnaires.update({_id: get(this, 'data.currentQuestionnaire._id')}, {$addToSet: {
+      'item': newItem
+    }})    
+  }
+  updateQuestionText(event, newValue){
+    // console.log('record id', get(this, 'data.currentQuestionnaire._id'))
+    console.log('updateQuestionText', newValue)
+    Session.set('questionnaireDesignerCurrentQuestion', {
+      text: newValue,
+      type: 'question'
+    });
+  }
+  saveSortedQuestionnaire(){
+    // Session.set('editedQuestionnaire', {
+    //   questionnaireId: Session.get('selectedQuestionnaire'),
+    //   items: this.state.items
+    // })
+
+    let editedQuestionnaire = Session.get('editedQuestionnaire');
+    let currentQuestionnaire = Questionnaires.findOne(get(editedQuestionnaire, 'questionnaireId'));
+
+    let updatedItemArray = [];
+
+    if(editedQuestionnaire){
+      if(Array.isArray(editedQuestionnaire.items)){
+        editedQuestionnaire.items.forEach(function(editedItem){
+          console.log('editedItem', editedItem)
+          
+          currentQuestionnaire.item.forEach(function(currentItem){
+            console.log('currentItem', currentItem)
+            if(editedItem.text === currentItem.text){
+              console.log('found match; pushing')
+              updatedItemArray.push(currentItem);
+            }        
+          });
+        });
+      }
+  
+      console.log('Current  questionnaire item array: ', currentQuestionnaire.item);
+      console.log('Proposed questionnaire item array: ', updatedItemArray);
+  
+      let count = 0;
+      updatedItemArray.forEach(function(item){
+        if(count === 0){
+          item.linkId = 1;
+        } else {
+          item.linkId = Random.id()
+        }
+        count++;
+      })  
+  
+      console.log('Renormalized linkIds: ', updatedItemArray);
+  
+      if(get(editedQuestionnaire, 'questionnaireId')){
+        Questionnaires.update({_id: get(editedQuestionnaire, 'questionnaireId')}, {$set: {
+          item: updatedItemArray
+        }})
+        Session.set('questionnaireIsSorting', false)
+      }      
+    }
+  }
   render() {
     console.log('React.version: ' + React.version);
+
+    let isActiveLabel = 'Active';
+
+    if(this.data.isActive){
+      isActiveLabel = 'Active';
+    } else {
+      isActiveLabel = 'Inactive';
+    }
 
     return (
       <div id="questionnairesPage">
         <FullPageCanvas>
-          <Col md={4}>
+          <Col md={4} style={{position: 'sticky', top: '0px'}}>
             <GlassCard height="auto">
               <CardTitle
                 title="Questionnaires"
@@ -118,12 +266,133 @@ export class QuestionnairesPage extends React.Component {
             </GlassCard>
           </Col>
           <Col md={4}>
+            <CardTitle 
+              title='Add Questions' 
+              />
+
             <GlassCard >
-              <CardTitle 
+              <CardTitle subtitle='Basic Question' />
+              <CardText>
+                <TextField
+                  hintText="Lorem ipsum?"
+                  errorText="Question text as it should be displayed."
+                  type='text'
+                  onChange={ this.updateQuestionText.bind(this) }
+                  fullWidth />
+                <br />
+                <TextField
+                  errorText="Multiplicity"
+                  defaultValue={1}
+                  type='number'
+                  />
+                {/* <Toggle
+                  label="Multiline Answer"
+                  toggled={ this.data.isActive }
+                />
+                <Toggle
+                  label="Numerical"
+                  toggled={ this.data.isNumber }
+                /> */}
+
+              </CardText>
+              <CardActions>
+                <FlatButton id='multilineButton' primary={ this.data.isMultiline } >Multiline</FlatButton>
+                <FlatButton id='numericalButton' primary={ this.data.isNumber } >Numerical</FlatButton>
+                <FlatButton id='addQuestionButton' onClick={ this.addQuestion.bind(this)} >Add</FlatButton>
+              </CardActions>
+            </GlassCard>
+            <DynamicSpacer />
+
+            {/* <GlassCard >
+              <CardText>
+                <TextField
+                  hintText="Lorem ipsum dolor set et..."
+                  errorText="Multiline"
+                  type='text'
+                  multiLine={true}         
+                  rows={3}         
+                  fullWidth />
+              </CardText>
+            </GlassCard>
+            <DynamicSpacer /> */}
+
+            <GlassCard >
+              <CardTitle subtitle='Multiple Choice Question' />
+              <CardText>
+                <TextField
+                  id='multipleChoiceQuestionTitle'
+                  hintText="Lorem ipsum...."
+                  errorText="Multiple Choice Question"
+                  type='text'
+                  fullWidth />
+                <TextField
+                  hintText="Multiple Choice"
+                  errorText="New Choice"
+                  type='text'
+                  style={{paddingLeft: '20px'}}
+                  fullWidth />
+                  <DynamicSpacer />
+                <RaisedButton onClick={this.addChoice} style={{margin: '20px'}}>Add Choice</RaisedButton>
+              </CardText>
+              <CardActions>
+                <FlatButton id='addMultipleChoice'>Add</FlatButton>
+              </CardActions>
+            </GlassCard>
+            <DynamicSpacer />
+            
+
+            <GlassCard >
+              <CardTitle subtitle='Question Response' />
+              <CardText>
+                <Toggle
+                  label="Response Behavior"
+                  toggled={ this.data.isActive }
+                />
+              </CardText>
+              <CardActions>
+                <FlatButton id='addMultipleChoice'>Add</FlatButton>
+              </CardActions>
+            </GlassCard>
+            <DynamicSpacer />
+
+            <GlassCard >
+              <CardTitle subtitle='Display' />
+              <CardText>
+                <TextField
+                  id='linkUrl'
+                  hintText="http://bit.ly/12345"
+                  errorText="Link URL"
+                  type='text'
+                  style={{paddingLeft: '20px'}}
+                  fullWidth />
+              </CardText>
+              <CardActions>
+                <FlatButton id='addMultipleChoice'>Add</FlatButton>
+              </CardActions>
+            </GlassCard>
+            <DynamicSpacer />
+
+
+          </Col>
+          <Col md={4} style={{position: 'sticky', top: '0px'}}>
+            <CardTitle 
+              title='Preview' 
+              />
+            <GlassCard>
+          {/* <CardTitle 
                 id='questionnaireTitleInput' 
                 title={get(this, 'data.currentQuestionnaire.title')} 
-                />
+                /> */}
               <CardText>
+                <TextField
+                  hintText="Questionnaire - My Custom Name"
+                  errorText="Please enter a title for your questionnaire."
+                  type='text'
+                  value={this.data.questionnaireName}
+                  onChange={ this.changeText.bind(this, 'name')}
+                  fullWidth />
+                  <br />
+
                 {/* <Select
                   value={ currentSelectIndex }
                   onChange={this.selectLanguage}
@@ -142,75 +411,27 @@ export class QuestionnairesPage extends React.Component {
                 >
                   { menuItems }
                 </Select> */}
+              {/* <br />
               <Toggle
-                label="Enabled"
-                toggled={ this.data.enabled }
-                onToggle={ this.enableQuestionnaire.bind(this) }
-              />
-              </CardText>
-            </GlassCard>
-            <DynamicSpacer />
-
-            <CardTitle 
-                title='Add Questions' 
-                />
-
-            <GlassCard >
-              <CardText>
-                <TextField
-                  hintText="Lorem ipsum..."
-                  errorText="Question"
-                  type='text'
-                  fullWidth />
+                label="Active"
+                toggled={ this.data.isActive }
+                onToggle={ this.toggleActiveStatus.bind(this) }
+              /> */}
               </CardText>
               <CardActions>
-
+                <FlatButton id='isActiveButton' onClick={this.toggleActiveStatus.bind(this)} primary={ this.data.isActive } >{isActiveLabel}</FlatButton>
+                <FlatButton id='isSortingButton' onClick={this.toggleSortStatus.bind(this)} primary={ this.data.isSorting } >Sort</FlatButton>
               </CardActions>
             </GlassCard>
             <DynamicSpacer />
 
-            <GlassCard >
+            <GlassCard>
               <CardText>
-                <TextField
-                  hintText="Lorem ipsum dolor set et..."
-                  errorText="Multiline"
-                  type='text'
-                  multiLine={true}         
-                  rows={3}         
-                  fullWidth />
+                <QuestionnaireDetail id='questionnaireDetails' currentQuestionnaire={this.data.currentQuestionnaire} />
               </CardText>
-            </GlassCard>
-            <DynamicSpacer />
-
-            <GlassCard >
-              <CardText>
-              <TextField
-                  hintText="Lorem ipsum...."
-                  errorText="Multiple Choice Question"
-                  type='text'
-                  fullWidth />
-                <TextField
-                  hintText="Multiple Choice"
-                  errorText="New Choice"
-                  type='text'
-                  style={{paddingLeft: '20px'}}
-                  fullWidth />
-                  <DynamicSpacer />
-                <RaisedButton onClick={this.addChoice} style={{margin: '20px'}}>Add</RaisedButton>
-              </CardText>
-
-            </GlassCard>
-            <DynamicSpacer />
-            
-
-
-
-          </Col>
-          <Col md={4}>
-            <GlassCard height='auto' >
-              <CardText>
-                <QuestionnaireDetail id='questionnaireDetails' currentQuestionnaire={this.data.currentQuestionnaire}  />
-              </CardText>
+              {/* <CardActions>
+                <FlatButton id='saveSortButton' onClick={this.saveSortedQuestionnaire.bind(this)} >Save Sort</FlatButton>
+              </CardActions> */}
             </GlassCard>
           </Col>
           

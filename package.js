@@ -1,6 +1,6 @@
 Package.describe({
   name: 'clinical:hl7-resource-questionnaire',
-  version: '1.4.8',
+  version: '1.4.9',
   summary: 'HL7 FHIR Resource - Questionnaire',
   git: 'https://github.com/clinical-meteor/hl7-resource-questionnaire',
   documentation: 'README.md'
@@ -54,5 +54,5 @@ Npm.depends({
   "moment": "2.22.2",
   "lodash": "4.17.4",
   "react-sortable-hoc": "1.6.1",
-  "react-icons": "3.2.2"
+  "react-icons": "3.8.0"
 })

@@ -1,4 +1,12 @@
-import { CardActions, CardText, CardTitle, RaisedButton, TextField } from 'material-ui';
+import { 
+  CardActions, 
+  CardText, 
+  CardTitle, 
+  RaisedButton, 
+  List,
+  ListItem,
+  TextField 
+} from 'material-ui';
 import { get, uniq, compact } from 'lodash';
 import {render} from 'react-dom';
 
@@ -21,6 +29,10 @@ let defaultQuestionnaire = {
   "resourceType" : "Questionnaire"
 };
 
+import { IoIosRemoveCircleOutline, IoIosRemoveCircle  } from 'react-icons/io';
+import { FaGripLines  } from 'react-icons/fa';
+
+
 
 let sortableItemStyle = {
   fontSize: '18px', 
@@ -31,45 +43,116 @@ let sortableItemStyle = {
   borderBottom: '1px solid lightgray'
 }
 
-const SortableItem = SortableElement(function({value}){
-  // return <li style={sortableItemStyle}>
-  //   <p>{value}</p>
-  // </li>
+
+
+function ListItemSwitch({value, isSorting, linkId}){
+    function removeItemFromQuestionnaire(linkId){
+      console.log("Removing item with linkId: ", linkId);   
+
+      if (Session.get("selectedQuestionnaire")) {
+        console.log("data.questionnaireId", Session.get('data.questionnaireId'));
+  
+        let currentQuestionnaire = Questionnaires.findOne({_id: Session.get('selectedQuestionnaire')});
+        console.log("currentQuestionnaire", currentQuestionnaire);
+
+        let newArray = [];
+        if(currentQuestionnaire){
+          if(Array.isArray(currentQuestionnaire.item)){
+            currentQuestionnaire.item.forEach(function(item){
+              if(item.linkId !== linkId){
+                newArray.push(item);
+              }
+            })
+          }
+        }
+
+
+
+        let count = 0;
+        newArray.forEach(function(item){
+          if(count === 0){
+            item.linkId = 1;
+          } else {
+            item.linkId = Random.id()
+          }
+          count++;
+        })
+    
+        console.log('newArray', newArray);
+
+        Questionnaires.update({_id: Session.get('selectedQuestionnaire')}, {$set: {
+          item: newArray   
+        }});      
+      }
+
+      return; 
+    }
+
+    let rightIcon;
+
+    console.log('ListItemSwitch.isSorting', isSorting)
+    console.log('ListItemSwitch.linkId', linkId)
+
+    if(isSorting){
+      rightIcon = <FaGripLines style={{top: '15px', right: '15px'}} />;
+    } else {
+      rightIcon = <IoIosRemoveCircleOutline style={{top: '15px', right: '15px'}} onClick={ removeItemFromQuestionnaire.bind(this, linkId) } />;
+    }
+    
 
     switch (value) {
       case 'choice':
-        result = <li style={{padding: '5px', backgroundColor: 'cornflowerblue', borderRadius: '3px'}}>
-          <p>{value}</p>
-        </li>
+        result = <ListItem 
+                  style={{padding: '5px', backgroundColor: 'cornflowerblue', borderRadius: '3px'}}
+                  primaryText={<p>{value}</p>}
+                  secondaryText={<p>{linkId}</p>}
+                  rightIconButton={rightIcon}
+                  />          
         break;
       case 'update':
-        result = <li style={{padding: '5px', backgroundColor: 'yellow', borderRadius: '3px'}}>
-          <p>{value}</p>
-        </li>
+        result = <ListItem 
+                  style={{padding: '5px', backgroundColor: 'yellow', borderRadius: '3px'}}
+                  primaryText={<p>{value}</p>}
+                  secondaryText={<p>{linkId}</p>}
+                  rightIconButton={rightIcon}
+                  />
         break;
       case 'display':
-        result = <li style={{padding: '5px', backgroundColor: 'pink', borderRadius: '3px'}}>
-          <p>{value}</p>
-        </li>
+        result = <ListItem 
+                  style={{padding: '5px', backgroundColor: 'pink', borderRadius: '3px'}}
+                  primaryText={<p>{value}</p>}
+                  secondaryText={<p>{linkId}</p>}
+                  rightIconButton={rightIcon}
+                  />
         break;
       case 'decimal':
-        result = <li style={{padding: '5px', backgroundColor: 'lavender', borderRadius: '3px'}}>
-          <p>{value}</p>
-        </li>
+        result = <ListItem 
+                  style={{padding: '5px', backgroundColor: 'lavender', borderRadius: '3px'}}
+                  primaryText={<p>{value}</p>}
+                  secondaryText={<p>{linkId}</p>}
+                  rightIconButton={rightIcon}
+                  />
         break;
       case 'response':
-        result = <li style={{padding: '5px', backgroundColor: 'lightgray', borderRadius: '3px'}}>
-          <p>{value}</p>
-        </li>
+        result = <ListItem 
+                  style={{padding: '5px', backgroundColor: 'lightgray', borderRadius: '3px'}}
+                  primaryText={<p>{value}</p>}
+                  secondaryText={<p>{linkId}</p>}
+                  rightIconButton={rightIcon}
+                  />
         break;  
       default:
-        result = <li style={sortableItemStyle}>
-          <p>{value}</p>
-        </li>
+        result = <ListItem 
+                  style={sortableItemStyle}
+                  primaryText={<p>{value}</p>}
+                  secondaryText={<p>{linkId}</p>}
+                  rightIconButton={rightIcon}                  
+                  />          
         break;
     }  
   return result;
-});
+}
+const SortableItem = SortableElement(ListItemSwitch);
 
 // const SortableItem = SortableElement(function(value){
 //   let result;
@@ -108,13 +191,31 @@ const SortableItem = SortableElement(function({value}){
 //   return result;
 // });
 
-const SortableList = SortableContainer(({items}) => {
+const SortableList = SortableContainer(({items, isSorting}) => {
   return (
-    <ul style={{cursor: 'pointer', listStyleType: 'none'}}>
-      {items.map((value, index) => (
-        <SortableItem key={`item-${index}`} index={index} value={value} />
-      ))}
-    </ul>
+    <List style={{cursor: 'pointer', listStyleType: 'none'}}>
+      {items.map(function(value, index){
+        console.log('SortableList.value', value);
+        let displayedText = '';
+
+        if(typeof value === "string"){
+          displayedText = value;
+        } else if(typeof value === "object"){
+          displayedText = get(value, 'text', "");
+        }
+
+        console.log('SortableList.sSorting', isSorting)
+
+        let result;
+        if(isSorting){
+          result = <SortableItem key={`item-${index}`} index={index} value={ displayedText } isSorting={isSorting} linkId={get(value, 'linkId', "")} />
+        } else {
+          result = <ListItemSwitch key={`item-${index}`} index={index} value={ displayedText } isSorting={isSorting} linkId={get(value, 'linkId', "")} />
+        }
+
+        return result;
+      })}
+    </List>
   );
 });
 
@@ -153,7 +254,25 @@ export class QuestionnaireDetail extends React.Component {
     super(props);
   }
   state = {
-      items: ['Item 1', 'Item 2', 'Item 3', 'Item 4', 'Item 5', 'Item 6'],
+      items: [{
+        text: 'Item 1',
+        linkId: 1
+      }, {
+        text: 'Item 2',
+        linkId: 2
+      }, {
+        text: 'Item 3',
+        linkId: 3
+      }, {
+        text: 'Item 4',
+        linkId: 4
+      }, {
+        text: 'Item 5',
+        linkId: 5
+      }, {
+        text: 'Item 6',
+        linkId: 6
+      }],
       currentQuestionnaire: false
   };
   // componentDidMount() {
@@ -186,8 +305,10 @@ export class QuestionnaireDetail extends React.Component {
           }
         });
         console.log('uniq(questionnaireItems)', uniq(compact(questionnaireItems)))
-        this.state.items = uniq(questionnaireItems);
-        this.setState({ items: questionnaireItems });
+        // this.state.items = uniq(questionnaireItems);
+        // this.state.items = get(nextProps, 'currentQuestionnaire.item');
+        // this.setState({ items: questionnaireItems });
+        this.setState({ items: get(nextProps, 'currentQuestionnaire.item') });
         this.setState({ currentQuestionnaire: nextProps.currentQuestionnaire });
       }
 
@@ -198,7 +319,7 @@ export class QuestionnaireDetail extends React.Component {
     let data = {
       questionnaireId: false,
       currentQuestionnaire: false,
-      //items: Session.get('sortableItems')
+      isSorting: Session.get('questionnaireIsSorting')
     };
 
     console.log("QuestionnaireDetail[data]", data);
@@ -214,17 +335,17 @@ export class QuestionnaireDetail extends React.Component {
       items: this.state.items
     })
   }
+  
   render() {
 
     let questionnaireDocument;
     let questions = [];
 
-
     console.log('QuestionnaireDetail.state', this.state);
     return (
       <div id={ get(this, 'props.id', '')} className="questionnaireDetail">
         <div id='questionnaireDocument'>
-          <SortableList items={this.state.items} onSortEnd={this.onSortEnd} />
+          <SortableList items={this.state.items} onSortEnd={this.onSortEnd} isSorting={this.data.isSorting}  />
         </div>
       </div>
     );
@@ -242,50 +363,6 @@ export class QuestionnaireDetail extends React.Component {
         <RaisedButton id='saveQuestionnaireButton'  className='saveQuestionnaireButton' label="Save" primary={true} onClick={this.handleSaveButton.bind(this)} />
       );
     }
-  }
-
-  changeState(field, event, value){
-    let questionnaireUpdate;
-
-    if(process.env.TRACE) console.log("questionnaireDetail.changeState", field, event, value);
-
-    // by default, assume there's no other data and we're creating a new questionnaire
-    if (Session.get('questionnaireUpsert')) {
-      questionnaireUpdate = Session.get('questionnaireUpsert');
-    } else {
-      questionnaireUpdate = defaultQuestionnaire;
-    }
-
-
-
-    // if there's an existing questionnaire, use them
-    if (Session.get('selectedQuestionnaire')) {
-      questionnaireUpdate = this.data.questionnaire;
-    }
-
-    switch (field) {
-      case "name":
-        questionnaireUpdate.name[0].text = value;
-        break;
-      case "gender":
-        questionnaireUpdate.gender = value.toLowerCase();
-        break;
-      case "birthDate":
-        questionnaireUpdate.birthDate = value;
-        break;
-      case "photo":
-        questionnaireUpdate.photo[0].url = value;
-        break;
-      case "mrn":
-        questionnaireUpdate.identifier[0].value = value;
-        break;
-      default:
-
-    }
-    // questionnaireUpdate[field] = value;
-    process.env.TRACE && console.log("questionnaireUpdate", questionnaireUpdate);
-
-    Session.set('questionnaireUpsert', questionnaireUpdate);
   }
 
 

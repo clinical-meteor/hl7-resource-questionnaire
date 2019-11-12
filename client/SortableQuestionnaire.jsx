@@ -10,14 +10,15 @@ import {
 
 
 const SortableItem = SortableElement(({value}) => <li style={{listStyleType: 'none'}}>
-    <TextField value={value} />
+    SortableItem
+    {/* <TextField value={value} /> */}
 </li>);
 
 const SortableList = SortableContainer(({items}) => {
   return (
     <ul style={{cursor: 'pointer', listStyleType: 'none'}}>
       {items.map((value, index) => (
-        <SortableItem key={`item-${index}`} index={index} value={value} />
+        <SortableItem className='sortableItem' key={`item-${index}`} index={index} value={value} />
       ))}
     </ul>
   );
@@ -38,7 +39,9 @@ export class SortableQuestionnaire extends React.Component {
         }));
     };
     render() {
-        return <SortableList items={this.state.items} onSortEnd={this.onSortEnd} />;
+      console.log('SortableQuestionnaire.state', this.state)
+        // return <SortableList className='sortableList' items={this.state.items} onSortEnd={this.onSortEnd} />;
+        return(<div>SortableList</div>)
     }
 }
 

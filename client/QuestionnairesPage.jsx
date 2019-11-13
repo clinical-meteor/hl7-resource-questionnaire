@@ -31,7 +31,9 @@ Session.setDefault('questionnaireFormData', defaultQuestionnaire);
 Session.setDefault('questionnaireSearchFilter', '');
 Session.setDefault('questionnairePageTabIndex', 0);
 Session.setDefault('questionnaireDesignerCurrentQuestion', {
+  linkId: 0,
   text: '',
+  type: 'question',
   multiplicity: 1,
   multiline: false,
   numerical: false
@@ -41,6 +43,8 @@ Session.setDefault('questionnaireIsSorting', false);
 
 Session.setDefault('enableCurrentQuestionnaire', false);
 Session.setDefault('activeQuestionnaireName', 'bar');
+Session.setDefault('activeQuestionLinkId', false);
+
 export class QuestionnairesPage extends React.Component {
   getMeteorData() {
     let data = {
@@ -56,7 +60,7 @@ export class QuestionnairesPage extends React.Component {
       questionnaireSearchFilter: '',
       currentQuestionnaire: null,
       questionnaireId: false,
-      sortableItems: ['Lorem ipsum?', 'Ipsum foo?', 'Dolar set et?'],
+      //sortableItems: ['Lorem ipsum?', 'Ipsum foo?', 'Dolar set et?'],
       enabled: Session.get('enableCurrentQuestionnaire'),
       chatbotInstalled: false,
       questionnaireName: '',
@@ -64,7 +68,8 @@ export class QuestionnairesPage extends React.Component {
       questionnaireDesignerCurrentMultiChoice: {label: ''},
       isActive: false,
       isNumber: false,
-      isSorting: Session.get('questionnaireIsSorting')
+      isSorting: Session.get('questionnaireIsSorting'),
+      activeQuestionLinkId: Session.get('activeQuestionLinkId')
     };
 
     if (Session.get('questionnaireFormData')) {
@@ -79,13 +84,13 @@ export class QuestionnairesPage extends React.Component {
         data.currentQuestionnaire = Questionnaires.findOne({_id: Session.get('selectedQuestionnaire')});
         console.log("data.currentQuestionnaire", data.currentQuestionnaire);
 
-        if (get(data, 'selectedQuestionnaire.item')) {
-          data.sortableItems = [];
-          data.currentQuestionnaire.item.forEach(function(item){
-            console.log('item', item)
-            data.sortableItems.push(get(item, 'text'));              
-          });
-        }
+        // if (get(data, 'selectedQuestionnaire.item')) {
+        //   data.sortableItems = [];
+        //   data.currentQuestionnaire.item.forEach(function(item){
+        //     console.log('item', item)
+        //     data.sortableItems.push(get(item, 'text'));              
+        //   });
+        // }
 
         if(get(data, 'currentQuestionnaire.status') === "active"){
           data.isActive = true;
@@ -98,7 +103,23 @@ export class QuestionnairesPage extends React.Component {
         } else {
           data.questionnaireName = '';
         }
+    }
 
+    if(Session.get('activeQuestionLinkId')){
+      console.log('ActiveQuestionLinkId was updated. Checking if it exists in the current questionnaire items.')
+      if (Array.isArray(get(data, 'currentQuestionnaire.item'))) {
+        data.currentQuestionnaire.item.forEach(function(item){
+          if(Session.equals('activeQuestionLinkId', get(item, 'linkId', ''))){      
+            console.log('Found.  Updating the question being edited.')
+            data.questionnaireDesignerCurrentQuestion = item;
+          }  
+        });
+      } 
+    } 
+
+    if (Session.get('questionnaireDesignerCurrentQuestion')) {
+      console.log('Selected question not found.  Using dirty state.')
+      data.questionnaireDesignerCurrentQuestion = Session.get('questionnaireDesignerCurrentQuestion');
     }
 
     console.log("QuestionnairesPage[data]", data);
@@ -155,6 +176,37 @@ export class QuestionnairesPage extends React.Component {
       'title': newValue
     }});
   }
+  saveQuestion(event, activeQuestionLinkId){
+    console.log('Saving question to Questionnaire/', get(this, 'data.currentQuestionnaire._id'))
+    console.log(' ')
+    console.log('Going to try to add the following item: ');
+    console.log(Session.get('questionnaireDesignerCurrentQuestion'));
+    console.log(' ')
+    console.log('ActiveQuestionLinkId', this.data.activeQuestionLinkId);
+    console.log(' ')
+
+    let currentItemsArray = get(this, 'data.currentQuestionnaire.item', []);
+    console.log('Current questionnaire items:', currentItemsArray)
+
+    let newItems = [];
+    if(Array.isArray(currentItemsArray)){
+      console.log('Iterating through current items')
+      currentItemsArray.forEach(function(item){
+        if(Session.equals('activeQuestionLinkId', item.linkId)){
+          console.log('Found a match.  Using dirty state.')
+          newItems.push(Session.get('questionnaireDesignerCurrentQuestion'));
+        } else {
+          console.log('No match.  Using the original.')
+          newItems.push(item);
+        }
+      });
+    }
+
+    console.log('New items.  Adding to questionnaire.', newItems)
+    Questionnaires.update({_id: get(this, 'data.currentQuestionnaire._id')}, {$set: {
+      'item': newItems
+    }})  
+  }
   addQuestion(event, bar, baz){
     console.log('Adding a question to Questionnaire/', get(this, 'data.currentQuestionnaire._id'))
     console.log(' ')
@@ -180,13 +232,19 @@ export class QuestionnairesPage extends React.Component {
       'item': newItem
     }})    
   }
+  returnCurrentlySelectedQuestionItem(event){
+    console.log('Returning currently selected Question Item')
+    return '';
+  }
   updateQuestionText(event, newValue){
     // console.log('record id', get(this, 'data.currentQuestionnaire._id'))
     console.log('updateQuestionText', newValue)
-    Session.set('questionnaireDesignerCurrentQuestion', {
-      text: newValue,
-      type: 'question'
-    });
+
+    let newQuestionState = Session.get('questionnaireDesignerCurrentQuestion');
+    newQuestionState.text = newValue;
+
+    Session.set('questionnaireDesignerCurrentQuestion', newQuestionState);
+    console.log('newQuestionState', newQuestionState)
   }
   saveSortedQuestionnaire(){
     // Session.set('editedQuestionnaire', {
@@ -277,6 +335,7 @@ export class QuestionnairesPage extends React.Component {
                   hintText="Lorem ipsum?"
                   errorText="Question text as it should be displayed."
                   type='text'
+                  value={ get(this, 'data.questionnaireDesignerCurrentQuestion.text') }
                   onChange={ this.updateQuestionText.bind(this) }
                   fullWidth />
                 <br />
@@ -298,7 +357,8 @@ export class QuestionnairesPage extends React.Component {
               <CardActions>
                 <FlatButton id='multilineButton' primary={ this.data.isMultiline } >Multiline</FlatButton>
                 <FlatButton id='numericalButton' primary={ this.data.isNumber } >Numerical</FlatButton>
-                <FlatButton id='addQuestionButton' onClick={ this.addQuestion.bind(this)} >Add</FlatButton>
+                <FlatButton id='addQuestionButton' onClick={ this.addQuestion.bind(this)} style={{float: 'right'}} >Add</FlatButton>
+                <FlatButton id='saveQuestionButton' onClick={ this.saveQuestion.bind(this, this.data.activeQuestionLinkId)} style={{float: 'right'}} >Save</FlatButton>
               </CardActions>
             </GlassCard>
             <DynamicSpacer />
@@ -388,7 +448,7 @@ export class QuestionnairesPage extends React.Component {
                   hintText="Questionnaire - My Custom Name"
                   errorText="Please enter a title for your questionnaire."
                   type='text'
-                  value={this.data.questionnaireName}
+                  value={ get(this, 'data.questionnaireName') }
                   onChange={ this.changeText.bind(this, 'name')}
                   fullWidth />
                   <br />

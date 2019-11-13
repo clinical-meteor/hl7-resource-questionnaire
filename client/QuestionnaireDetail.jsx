@@ -46,6 +46,24 @@ let sortableItemStyle = {
 
 
 function ListItemSwitch({value, isSorting, linkId}){
+    function selectedItem(linkId){
+      console.log("Clicked and selected an item", linkId);
+
+      let currentQuestionnaire = Questionnaires.findOne({_id: Session.get('selectedQuestionnaire')});
+      console.log("currentQuestionnaire", currentQuestionnaire);
+
+      let currentItem;
+      if (get(currentQuestionnaire, 'item')) {
+        currentQuestionnaire.item.forEach(function(item){
+          if(item.linkId === linkId){
+            currentItem = item;
+          }
+        });
+      }
+         
+      Session.set('questionnaireDesignerCurrentQuestion', currentItem);
+      Session.set('activeQuestionLinkId', linkId);     
+    }
     function removeItemFromQuestionnaire(linkId){
       console.log("Removing item with linkId: ", linkId);   
 
@@ -65,8 +83,6 @@ function ListItemSwitch({value, isSorting, linkId}){
             })
           }
         }
-
-
 
         let count = 0;
         newArray.forEach(function(item){
@@ -107,6 +123,7 @@ function ListItemSwitch({value, isSorting, linkId}){
                   primaryText={<p>{value}</p>}
                   secondaryText={<p>{linkId}</p>}
                   rightIconButton={rightIcon}
+                  onClick={ selectedItem.bind(this, linkId) }
                   />          
         break;
       case 'update':
@@ -115,6 +132,7 @@ function ListItemSwitch({value, isSorting, linkId}){
                   primaryText={<p>{value}</p>}
                   secondaryText={<p>{linkId}</p>}
                   rightIconButton={rightIcon}
+                  onClick={ selectedItem.bind(this, linkId) }
                   />
         break;
       case 'display':
@@ -123,6 +141,7 @@ function ListItemSwitch({value, isSorting, linkId}){
                   primaryText={<p>{value}</p>}
                   secondaryText={<p>{linkId}</p>}
                   rightIconButton={rightIcon}
+                  onClick={ selectedItem.bind(this, linkId) }
                   />
         break;
       case 'decimal':
@@ -131,6 +150,7 @@ function ListItemSwitch({value, isSorting, linkId}){
                   primaryText={<p>{value}</p>}
                   secondaryText={<p>{linkId}</p>}
                   rightIconButton={rightIcon}
+                  onClick={ selectedItem.bind(this, linkId) }
                   />
         break;
       case 'response':
@@ -139,6 +159,7 @@ function ListItemSwitch({value, isSorting, linkId}){
                   primaryText={<p>{value}</p>}
                   secondaryText={<p>{linkId}</p>}
                   rightIconButton={rightIcon}
+                  onClick={ selectedItem.bind(this, linkId) }
                   />
         break;  
       default:
@@ -147,6 +168,7 @@ function ListItemSwitch({value, isSorting, linkId}){
                   primaryText={<p>{value}</p>}
                   secondaryText={<p>{linkId}</p>}
                   rightIconButton={rightIcon}                  
+                  onClick={ selectedItem.bind(this, linkId) }
                   />          
         break;
     }  
